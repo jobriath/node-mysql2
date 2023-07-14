@@ -160,6 +160,18 @@ exports.createTemplate = function() {
 
 const ClientFlags = require('../lib/constants/client.js');
 
+// remove ssl bit from the flags
+const handshakeFlags = 0xffffff ^ (ClientFlags.COMPRESS | ClientFlags.SSL);
+const handshakeConfig = {
+  protocolVersion: 10,
+  serverVersion: 'node.js rocks',
+  connectionId: 1234,
+  statusFlags: 2,
+  characterSet: 8,
+  capabilityFlags: handshakeFlags
+}
+exports.handshakeConfig = handshakeConfig;
+
 const portfinder = require('portfinder');
 exports.createServer = function(onListening, handler) {
   const server = require('../index.js').createServer();
@@ -168,18 +180,7 @@ exports.createServer = function(onListening, handler) {
       // server side of the connection
       // ignore disconnects
     });
-    // remove ssl bit from the flags
-    let flags = 0xffffff;
-    flags = flags ^ (ClientFlags.COMPRESS | ClientFlags.SSL);
-
-    conn.serverHandshake({
-      protocolVersion: 10,
-      serverVersion: 'node.js rocks',
-      connectionId: 1234,
-      statusFlags: 2,
-      characterSet: 8,
-      capabilityFlags: flags
-    });
+    conn.serverHandshake(handshakeConfig);
     if (handler) {
       handler(conn);
     }
@@ -187,6 +188,11 @@ exports.createServer = function(onListening, handler) {
   portfinder.getPort((err, port) => {
     server.listen(port, onListening);
   });
+  return server;
+};
+
+exports.createFakeServer = function() {
+  const server = require('../index.js').createServer();
   return server;
 };
 
